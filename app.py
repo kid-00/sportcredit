@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.set_page_config(page_title="运动信用卡", page_icon="💳", layout="wide")
@@ -12,7 +12,6 @@ st.set_page_config(page_title="运动信用卡", page_icon="💳", layout="wide"
 st.title("💳 运动信用卡·负荷风控师")
 st.caption("把训练负荷当作刷卡消费，把恢复能力当作还款能力")
 
-# ---------- 侧边栏输入 ----------
 with st.sidebar:
     st.header("今日运动数据")
     load = st.slider("近7天训练负荷", 0, 1000, 500)
@@ -23,7 +22,6 @@ with st.sidebar:
     st.divider()
     st.caption("拖动滑块，信用分与建议实时变化")
 
-# ---------- 信用分计算函数 ----------
 def calc_score(load, sleep, hrv, fatigue, injury):
     s = 100
     s -= max(0, (load - 500) / 10)
@@ -42,7 +40,6 @@ elif score >= 60:
 else:
     level, risk, color = "低额度·建议恢复", "高", "🔴"
 
-# ---------- 顶部指标卡 ----------
 col1, col2, col3 = st.columns(3)
 col1.metric("运动信用分", f"{score} / 100")
 col2.metric("今日训练额度", level)
@@ -52,7 +49,6 @@ st.progress(score / 100)
 
 st.divider()
 
-# ---------- 90天信用分趋势 ----------
 st.subheader("📈 近90天信用分趋势")
 
 np.random.seed(7)
@@ -64,7 +60,6 @@ sleep_h = 7 + np.random.normal(0, 0.7, days)
 hrv_h = 60 + np.random.normal(0, 9, days)
 fatigue_h = 5 + np.random.normal(0, 1.3, days)
 
-# 人为制造3次透支期，让曲线有起伏
 for i in range(days):
     if i % 28 < 3:
         load_h[i] += 220
@@ -75,12 +70,12 @@ for i in range(days):
 scores_h = [calc_score(load_h[i], sleep_h[i], hrv_h[i], fatigue_h[i], False) for i in range(days)]
 
 fig2, ax2 = plt.subplots(figsize=(10, 3))
-ax2.plot(dates, scores_h, color="#1971C2", linewidth=2, label="信用分")
-ax2.axhline(80, color="#2F9E44", linestyle="--", alpha=0.6, label="高额度线 80")
-ax2.axhline(60, color="#E03131", linestyle="--", alpha=0.6, label="预警线 60")
+ax2.plot(dates, scores_h, color="#1971C2", linewidth=2, label="Score")
+ax2.axhline(80, color="#2F9E44", linestyle="--", alpha=0.6, label="High 80")
+ax2.axhline(60, color="#E03131", linestyle="--", alpha=0.6, label="Warning 60")
 ax2.fill_between(dates, 60, scores_h, where=(np.array(scores_h) < 60), color="#FFA8A8", alpha=0.6)
 ax2.set_ylim(0, 105)
-ax2.set_ylabel("信用分")
+ax2.set_ylabel("Score")
 ax2.legend(loc="lower left", fontsize=8)
 ax2.spines['top'].set_visible(False)
 ax2.spines['right'].set_visible(False)
@@ -93,7 +88,6 @@ c3.metric("透支次数", int(np.sum(np.diff((np.array(scores_h) < 60).astype(in
 
 st.divider()
 
-# ---------- 左右两栏：归因图 + 恢复计划 ----------
 left, right = st.columns([1.2, 1])
 
 with left:
@@ -103,16 +97,16 @@ with left:
     d_sleep = max(0, (7 - sleep) * 8)
     d_hrv = max(0, (60 - hrv) / 2)
     d_fatigue = max(0, (fatigue - 5) * 5)
-    if d_load > 0: labels.append("训练负荷偏高"); values.append(round(d_load, 1))
-    if d_sleep > 0: labels.append("睡眠不足"); values.append(round(d_sleep, 1))
-    if d_hrv > 0: labels.append("HRV偏低"); values.append(round(d_hrv, 1))
-    if d_fatigue > 0: labels.append("主观疲劳高"); values.append(round(d_fatigue, 1))
-    if injury: labels.append("近期伤病史"); values.append(15)
+    if d_load > 0: labels.append("High Load"); values.append(round(d_load, 1))
+    if d_sleep > 0: labels.append("Low Sleep"); values.append(round(d_sleep, 1))
+    if d_hrv > 0: labels.append("Low HRV"); values.append(round(d_hrv, 1))
+    if d_fatigue > 0: labels.append("High Fatigue"); values.append(round(d_fatigue, 1))
+    if injury: labels.append("Injury History"); values.append(15)
 
     if values:
         fig, ax = plt.subplots(figsize=(6, 3))
         bars = ax.barh(labels, values, color="#E8590C")
-        ax.set_xlabel("扣分分值")
+        ax.set_xlabel("Deduction")
         ax.invert_yaxis()
         for bar, v in zip(bars, values):
             ax.text(bar.get_width() + 0.5, bar.get_y() + bar.get_height()/2,
@@ -134,7 +128,6 @@ with right:
 
     st.info("💡 **信用机制**：连续 3 天信用分 ≥ 85，可解锁更高训练额度；连续 2 天 < 60，系统自动降额并推送恢复任务。")
 
-# ---------- 底部说明 ----------
 st.divider()
 with st.expander("📖 运动信用卡怎么用？"):
     st.markdown("""
