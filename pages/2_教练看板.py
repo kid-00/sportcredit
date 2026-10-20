@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
+matplotlib.rcParams['font.sans-serif'] = ['DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.set_page_config(page_title="教练看板", page_icon="👥", layout="wide")
@@ -14,7 +14,7 @@ st.caption("50名队员的信用分监控、风险分布与30天透支热力图"
 
 np.random.seed(42)
 n_players, n_days = 50, 30
-players = [f"队员{i+1:02d}" for i in range(n_players)]
+players = [f"P{i+1:02d}" for i in range(n_players)]
 dates = pd.date_range(end=pd.Timestamp.today(), periods=n_days)
 
 base_load = np.random.randint(350, 750, n_players)
@@ -50,20 +50,20 @@ for i in range(n_players):
         score_mat[i, d] = calc_score(load_mat[i, d], sleep_mat[i, d], hrv_mat[i, d], fatigue_mat[i, d])
 
 df = pd.DataFrame({
-    "姓名": players,
-    "信用分": score_mat[:, -1].astype(int),
-    "训练负荷": load_mat[:, -1].astype(int),
-    "睡眠": np.round(sleep_mat[:, -1], 1),
+    "Player": players,
+    "Score": score_mat[:, -1].astype(int),
+    "Load": load_mat[:, -1].astype(int),
+    "Sleep": np.round(sleep_mat[:, -1], 1),
     "HRV": hrv_mat[:, -1].astype(int),
-    "疲劳": fatigue_mat[:, -1].astype(int),
+    "Fatigue": fatigue_mat[:, -1].astype(int),
 })
-df["风险"] = df["信用分"].apply(lambda x: "低" if x >= 80 else "中" if x >= 60 else "高")
+df["Risk"] = df["Score"].apply(lambda x: "Low" if x >= 80 else "Mid" if x >= 60 else "High")
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("团队平均信用分", f"{df['信用分'].mean():.0f}")
-c2.metric("高风险人数", int((df["风险"] == "高").sum()))
-c3.metric("中风险人数", int((df["风险"] == "中").sum()))
-c4.metric("今日透支率", f"{(df['信用分'] < 60).mean() * 100:.0f}%")
+c1.metric("团队平均信用分", f"{df['Score'].mean():.0f}")
+c2.metric("高风险人数", int((df["Risk"] == "High").sum()))
+c3.metric("中风险人数", int((df["Risk"] == "Mid").sum()))
+c4.metric("今日透支率", f"{(df['Score'] < 60).mean() * 100:.0f}%")
 
 st.divider()
 
@@ -71,24 +71,24 @@ left, right = st.columns(2)
 
 with left:
     st.subheader("🥧 风险等级分布")
-    counts = df["风险"].value_counts().reindex(["低", "中", "高"]).fillna(0)
+    counts = df["Risk"].value_counts().reindex(["Low", "Mid", "High"]).fillna(0)
     fig1, ax1 = plt.subplots(figsize=(4, 4))
     colors = ["#2F9E44", "#F08C00", "#E03131"]
     ax1.pie(counts, labels=counts.index,
-            autopct=lambda p: f"{int(round(p * counts.sum() / 100))}人\n{p:.0f}%",
+            autopct=lambda p: f"{int(round(p * counts.sum() / 100))}\n{p:.0f}%",
             colors=colors, startangle=90,
             wedgeprops={"edgecolor": "white", "linewidth": 2})
-    ax1.set_title("低 / 中 / 高风险")
+    ax1.set_title("Risk Level")
     st.pyplot(fig1)
 
 with right:
     st.subheader("📊 信用分分布")
     fig2, ax2 = plt.subplots(figsize=(5, 4))
-    ax2.hist(df["信用分"], bins=10, color="#1971C2", edgecolor="white")
-    ax2.axvline(60, color="#E03131", linestyle="--", label="预警线 60")
-    ax2.axvline(80, color="#2F9E44", linestyle="--", label="高额度线 80")
-    ax2.set_xlabel("信用分")
-    ax2.set_ylabel("人数")
+    ax2.hist(df["Score"], bins=10, color="#1971C2", edgecolor="white")
+    ax2.axvline(60, color="#E03131", linestyle="--", label="Warning 60")
+    ax2.axvline(80, color="#2F9E44", linestyle="--", label="High 80")
+    ax2.set_xlabel("Score")
+    ax2.set_ylabel("Count")
     ax2.legend(fontsize=8)
     ax2.spines['top'].set_visible(False)
     ax2.spines['right'].set_visible(False)
@@ -105,16 +105,16 @@ ax3.set_xticks(range(0, n_days, 5))
 ax3.set_xticklabels([dates[i].strftime("%m-%d") for i in range(0, n_days, 5)], fontsize=8)
 ax3.set_yticks(range(n_players))
 ax3.set_yticklabels(players, fontsize=7)
-ax3.set_xlabel("日期")
-ax3.set_ylabel("队员")
+ax3.set_xlabel("Date")
+ax3.set_ylabel("Player")
 cbar = plt.colorbar(im, ax=ax3, fraction=0.02, pad=0.01)
-cbar.set_label("信用分")
+cbar.set_label("Score")
 st.pyplot(fig3)
 
 st.divider()
 
 st.subheader("🚨 高风险队员（优先干预）")
-high = df[df["风险"] == "高"].sort_values("信用分")
+high = df[df["Risk"] == "High"].sort_values("Score")
 if len(high) > 0:
     st.dataframe(high.reset_index(drop=True), use_container_width=True)
 else:
@@ -123,4 +123,4 @@ else:
 st.divider()
 
 st.subheader("📋 全员信用分")
-st.dataframe(df.sort_values("信用分").reset_index(drop=True), use_container_width=True)
+st.dataframe(df.sort_values("Score").reset_index(drop=True), use_container_width=True)
